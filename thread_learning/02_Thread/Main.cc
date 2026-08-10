@@ -4,12 +4,12 @@
 using namespace ThreadModule;
 
 int main(){
-  Thread t([](){
+  Thread<int> t([](int){
     while(true){
       std::cout << "makabaka" << std::endl;
       sleep(1);
     }
-  });
+  }, 0);
   t.Start();
 
   sleep(5);
