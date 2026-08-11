@@ -3,4 +3,4 @@ Main: Main.cc
 
 .PHONY: clean
 clean:
-	rm -rf Main
+	rm -rf Main log

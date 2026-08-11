@@ -14,24 +14,30 @@ namespace ThreadPoolModule{
   using namespace CondModule;
   using namespace LogModule;
   using namespace ThreadModule;
-  static const int defaultnum = 5;
+  static const int defaultnum = 3;
+  static const int defaultcap = 2;
   template<class T = Task>
   class ThreadPool{
   private:
     std::queue<T> _task_queue;
     Mutex _mutex;
-    Cond _cond;
+    Cond _c_cond;
+    Cond _p_cond;
     std::vector<Thread<std::string>> _threads;
-    int _thread_cnt;        // 有几个工作线程
-    bool _isrunning;        // 是否在运行
-    int _thread_wait_nums;  // 有多少工作线程在挂起等待任务
-    static ThreadPool<T>* _instance;     // 唯一实例对象
-    static Mutex _s_mutex;  // 静态锁
+    int _thread_cnt;                      // 有几个工作线程
+    bool _isrunning;                      // 是否在运行
+    int _thread_wait_nums;                // 有多少工作线程在挂起等待任务
+    int _producer_wait_nums;              // 有多少生产者等着位置生产
+    static ThreadPool<T>* _instance;      // 唯一实例对象
+    static Mutex _s_mutex;                // 静态锁
+    int _max_cap;                         // 队列的最大容量
 
-    ThreadPool(int num = defaultnum)
+    ThreadPool(int num = defaultnum, int cap = defaultcap)
     : _thread_cnt(num),
       _isrunning(false),
-      _thread_wait_nums(0) {
+      _thread_wait_nums(0),
+      _producer_wait_nums(0),
+      _max_cap(cap) {
     }
 
     ThreadPool(const ThreadPool<T> &) = delete;
@@ -46,7 +52,7 @@ namespace ThreadPoolModule{
           while(_task_queue.empty() && _isrunning){
             _thread_wait_nums++;
             // 睡觉
-            _cond.Wait(_mutex);
+            _c_cond.Wait(_mutex);
 
             // 醒了
             _thread_wait_nums--;
@@ -61,6 +67,9 @@ namespace ThreadPoolModule{
           // 在锁内拿资源
           task = _task_queue.front();
           _task_queue.pop();
+          if (_producer_wait_nums > 0) {
+            _p_cond.Notify();
+          }
         }  // <---- 临界区结束，出了这个大括号lockguard 自动析构，锁释放
         // 此时该任务已经释放其他线程看不见了只有当前线程拿到了，所以可以在临界区外面调用实现高并发
         task();
@@ -101,10 +110,19 @@ namespace ThreadPoolModule{
     bool Enqueue(const T&task) {
       LockGuard lockguard(_mutex);
       if(!_isrunning) return false;
+      // 队列满了并且还在运行，就等消费者先消费，再叫起来
+      while (_task_queue.size() >= _max_cap) {
+        _producer_wait_nums++;
+        _p_cond.Wait(_mutex );
+        _producer_wait_nums--;
+      }
+      // 如果睡醒了起来发现打样了那还上个毛班直接跑路
+      if(!_isrunning) return false;
+
       _task_queue.emplace(task);
       if(_thread_wait_nums > 0) {
         // 有活了并且有人在睡觉，那就别睡了起来干活
-        _cond.Notify();
+        _c_cond.Notify();
       }
       return true;
     }
@@ -115,7 +133,9 @@ namespace ThreadPoolModule{
         if (!_isrunning)
           return;
         _isrunning = false;
-        _cond.NotifyAll();
+        // 下班了所有人别睡了跑路了兄弟
+        _c_cond.NotifyAll();
+        _p_cond.NotifyAll();
       }
       for(auto &t : _threads) {
         t.Join();
