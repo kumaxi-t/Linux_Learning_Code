@@ -25,6 +25,17 @@ namespace ThreadPoolModule{
     int _thread_cnt;        // 有几个工作线程
     bool _isrunning;        // 是否在运行
     int _thread_wait_nums;  // 有多少工作线程在挂起等待任务
+    static ThreadPool<T>* _instance;     // 唯一实例对象
+    static Mutex _s_mutex;  // 静态锁
+
+    ThreadPool(int num = defaultnum)
+    : _thread_cnt(num),
+      _isrunning(false),
+      _thread_wait_nums(0) {
+    }
+
+    ThreadPool(const ThreadPool<T> &) = delete;
+    ThreadPool& operator=(const ThreadPool<T> &) = delete;
 
 
     void HandlerTask(std::string name) {
@@ -56,11 +67,20 @@ namespace ThreadPoolModule{
       }
     }
   public:
-    ThreadPool(int num = defaultnum)
-    : _thread_cnt(num),
-      _isrunning(false),
-      _thread_wait_nums(0) {
 
+    static ThreadPool<T> *GetInstance() {
+      // 双重检查锁定，如果用例已经创建好了就不需要再去抢锁避免系统调用开销      
+      if(_instance == nullptr) {
+        // 必须要用静态锁，进入这里时对象还没诞生，普通成员锁必须通过对象来访问，此时强制访问会发生段错误
+        // 静态锁属于整个类本身，在程序刚启动（全局初始化阶段）就已经在内存的静态全局区分配好了，整个进程只有一把锁
+        LockGuard lockguard(_s_mutex);
+        if(_instance == nullptr) {
+          _instance = new ThreadPool<T>;
+          _instance->Start();
+          return _instance;
+        }
+      }
+      return _instance;
     }
 
     void Start() {  
@@ -91,7 +111,7 @@ namespace ThreadPoolModule{
 
     void Stop(){
       {
-        LockGuard lockgurad(_mutex);
+        LockGuard lockguard(_mutex);
         if (!_isrunning)
           return;
         _isrunning = false;
@@ -107,6 +127,11 @@ namespace ThreadPoolModule{
       Stop();
     }
   };
+  template<class T>
+  ThreadPool<T> *ThreadPool<T>::_instance = nullptr;
+
+  template<class T>
+  Mutex ThreadPool<T>::_s_mutex;
 
 
 

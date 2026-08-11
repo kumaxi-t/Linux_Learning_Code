@@ -13,15 +13,27 @@ void DownloadTask(int task_id) {
 int main(){
   ENABLE_CONSOLE_LOG();
 
-  ThreadPool<Task> pool(5);
-  pool.Start();
-  for (int i = 1; i <= 10; ++i) {
-    pool.Enqueue([i]() { DownloadTask(i); });
-    usleep(50000); 
+  // ThreadPool<Task> pool(5);
+  // pool.Start();
+  // for (int i = 1; i <= 10; ++i) {
+  //   pool.Enqueue([i]() { DownloadTask(i); });
+  //   usleep(50000); 
+  // }
+  //
+  // sleep(2);
+  // 
+  // pool.Stop();
+
+  for (int i = 1; i <= 10; i++) {
+    ThreadPool<Task>::GetInstance()->Enqueue([i](){
+      DownloadTask(i);
+    });
+    usleep(50000);
   }
 
-  sleep(2);
 
-  pool.Stop();
+  sleep(2);
+  ThreadPool<Task>::GetInstance()->Stop();
+
   return 0;
 }
