@@ -1,1 +1,11 @@
-.venv/
+# 忽略所有可执行文件或目标文件
+*.o
+*.so
+*.a
+Main
+main
+a.out
+
+# 忽略 VS Code 配置与临时文件
+.vscode/
+*.swp
