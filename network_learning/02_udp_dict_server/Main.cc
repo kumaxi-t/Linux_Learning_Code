@@ -4,8 +4,7 @@
 #include "UdpServer.hpp"
 #include <memory>
 
-void TranslateDict(const std::string &req, std::string *resp)
-{
+void TranslateDict(const std::string &req, std::string *resp) {
     static std::unordered_map<std::string, std::string> dict = {
         {"apple", "苹果"},
         {"banana", "香蕉"},
