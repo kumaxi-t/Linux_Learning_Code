@@ -75,6 +75,12 @@ public:
           req.pop_back();
 
         InetAddr who(peer);
+        // 先判断是否有用户下线
+        if(req == "QUIT" || req == "Q" || req == "quit" || req == "q") {
+          RemoveUser(who);
+          Broadcast("【已离开聊天室】", who);
+          continue;         // 不进入下面的代码，也即不向其他人发送退出信息
+        }
 
         CheckUser(who);
 
@@ -103,6 +109,16 @@ private:
     }
   }
 
+  void RemoveUser(const InetAddr &user) {
+    for(auto it = _online_users.begin(); it != _online_users.end(); ++it) {
+      if(*it == user) {
+        _online_users.erase(it);
+        std::cout << "【用户下线】: " << user.PrintDebug()
+                          << " 当前在线人数: " << _online_users.size() << std::endl;
+        break;
+      }
+    }
+  }
 
 
 private:  
