@@ -2,10 +2,13 @@
 #include <iostream>
 #include <cstdint>
 #include <unistd.h>
+#include "nocopy.hpp"
 #include "Comm.hpp"
-static const int defaultsocket = -1;
 
-class TcpServer {
+static const int defaultsocket = -1;
+static const int defaultbacklog = 6;
+
+class TcpServer : public nocopy{
 public:
   TcpServer(uint16_t port) : _port(port), _listensock(defaultsocket) {
 
@@ -15,7 +18,7 @@ public:
     _listensock = socket(AF_INET, SOCK_STREAM, 0);
     if(_listensock < 0) {
       std::cerr << "creat sock error" << std::endl;
-      exit(1);
+      exit(Socket_Err);
     }
 
     struct sockaddr_in local;
@@ -26,12 +29,12 @@ public:
 
     if(bind(_listensock, CONV(&local), sizeof(local)) != 0) {
       std::cerr << "bind socket error" << std::endl;
-      exit(2);
+      exit(Bind_Err);
     }
 
-    if(listen(_listensock, 6) != 0) {
+    if(listen(_listensock, defaultbacklog) != 0) {
       std::cerr << "listen socket error" << std::endl;
-      exit(3);
+      exit(Listen_Err);
     }
     
   }
