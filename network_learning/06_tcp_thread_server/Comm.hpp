@@ -8,6 +8,8 @@
 #include <string>
 #include <unistd.h>
 #include <pthread.h>
+#include <functional>
+#include <vector>
 #include <unistd.h>
 #include <sys/wait.h>
 enum {

@@ -3,6 +3,8 @@
 #include "InetAddr.hpp"
 #include "nocopy.hpp"
 
+using command_server_t = std::function<std::string(const std::string &)>;
+
 class TcpServer;
 
 class ThreadData {
@@ -28,10 +30,11 @@ const static int gbacklog = 8;
 class TcpServer : public nocopy{
 public:
 
-  TcpServer(uint16_t port) 
+  TcpServer(uint16_t port, command_server_t server) 
   : _port(port),
     _isrunning(false),
-    _listensockfd(-1) {
+    _listensockfd(-1),
+    _server(server) {
      
   }
 
@@ -111,9 +114,18 @@ public:
       int n = read(sockfd, inbuffer, sizeof(inbuffer) - 1);
       if(n > 0) {
         inbuffer[n] = 0;
-        std::cout << "[" << addr.PrintDebug() << "]# " << inbuffer;
-        std::string echo_string = "echo# " + std::string(inbuffer);
-        write(sockfd, echo_string.c_str(), echo_string.size());
+
+        std::string cmd = inbuffer;
+        while(!cmd.empty() && (cmd.back() == '\n' || cmd.back() == '\r')) cmd.pop_back();
+
+        if(cmd.empty()) continue;
+
+        std::string resp = _server(cmd);
+
+        // std::cout << "[" << addr.PrintDebug() << "]# " << inbuffer;
+        // std::string echo_string = "echo# " + std::string(inbuffer);
+        
+        write(sockfd, resp.c_str(), resp.size());
       }else if (n == 0) {
         std::cout << "Client exit" << std::endl;
         break;
@@ -133,5 +145,6 @@ private:
   bool _isrunning;
   int _listensockfd;
   uint16_t _port;
+  command_server_t _server;
 
 };
