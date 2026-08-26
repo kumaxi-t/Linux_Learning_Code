@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   uint16_t port = std::stoi(argv[1]);
 
   // 在创建任何套接字之前，完成守护进程化自立门户
-  DaemonModule::Daemon(false, true);
+  // DaemonModule::Daemon(false, true);
 
   std::unique_ptr<Http> server = std::make_unique<Http>(port);
   server->Start();

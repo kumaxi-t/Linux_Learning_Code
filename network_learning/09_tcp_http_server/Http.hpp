@@ -97,6 +97,52 @@ private:
 
 
 };
+class HttpResponse {
+private:
+  std::string _version;     // 协议版本 "HTTP/1.0"
+  int _status_code;         // 状态码
+  std::string _status_desc; // 状态描述 "OK"
+  std::unordered_map<std::string, std::string> _headers;    // 响应报头哈希表
+  std::string _body;        // 响应正文
+public:
+  HttpResponse()
+  : _version("HTTP/1.0"),
+    _status_code(200),
+    _status_desc("OK") {}
+
+
+  void SetStatus(int code, const std::string &desc) {
+    _status_code = code;
+    _status_desc = desc;
+  }
+
+  void SetHeaders(const std::string &key, const std::string &value) {
+    _headers[key] = value;
+  }
+
+  void SetBody(const std::string &body, const std::string &mime_type = "text/html") {
+    _body = body;
+    SetHeaders("Content-Type", mime_type);
+    SetHeaders("Content-Length", std::to_string(_body.size()));
+  }
+
+  std::string Serialize() const {
+    std::string res;
+    res += _version + gspace + std::to_string(_status_code) + gspace + _status_desc + glinespace;
+    for(const auto [k, v] : _headers) {
+      res += k + gsep + v + glinespace;
+    }
+    res += glinespace;
+    res += _body;
+    return res;
+  }
+
+
+  ~HttpResponse() {}
+};
+
+
+
 
 class Http {
 public:
@@ -115,15 +161,75 @@ public:
     }
     req.PrintDebug();
 
+    HttpResponse resp;
+    // 处理重定向
+    if(req.GetUrl() == "/bilibili") {
+      resp.SetStatus(302, "Found");
+      resp.SetHeaders("Location", "https://www.bilibili.com");
+      sock->Send(resp.Serialize());
+      return ;
+    }
+    // 处理静态资源读取
     std::string path = req.GetPath();
     std::string body = Util::GetFileContent(path);
-    std::string response;
-    response += "HTTP/1.0 200 OK\r\n";
-    response += "Content-Type: text/html\r\n";
-    response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
-    response += "\r\n"; 
-    response += body;
-    sock->Send(response);
+
+    if(body.empty()) {
+      // 文件不存在 -> 404
+      std::string err_path = defaultwebpath + "/404.html";
+      std::string err_body = Util::GetFileContent(err_path);
+      if(err_body.empty()) {
+        err_body = "<html><h1>404 Not Found</h1></html>";
+      }
+      resp.SetStatus(404, "Not Found");
+      resp.SetBody(err_body);
+    }else {
+      //  文件存在
+      std::string suffix = Util::GetSuffix(path);
+      std::string mime_type = Util::GetMimeType(suffix);
+      resp.SetStatus(200, "OK");
+      resp.SetBody(body, mime_type);
+    }
+    sock->Send(resp.Serialize());
+
+
+    // std::string path = req.GetPath();
+    // std::string body = Util::GetFileContent(path);
+    // std::string response;
+    // if(body.empty()) {
+    //   std::string err_path = defaultwebpath + "/404.html";
+    //   std::string err_body = Util::GetFileContent(err_path);
+    //   if (err_body.empty()) {
+    //       err_body = "<html><h1>404 Not Found</h1></html>";
+    //   }
+    //   response += "HTTP/1.0 404 Not Found\r\n";
+    //   response += "Content-Type: text/html\r\n";
+    //   response += "Content-Length: " + std::to_string(err_body.size()) + "\r\n";
+    //   response += "\r\n";
+    //   response += err_body;
+    //   sock->Send(response);  
+    //   return ;
+    // }
+    // if(req.GetUrl() == "/bilibili") {
+    //   response += "HTTP/1.0 302 Found\r\n";
+    //   response += "Location: https://www.bilibili.com\r\n";
+    //   response += "\r\n";
+    //   sock->Send(response);
+    //   return ;
+    // }
+    // std::string suffix = Util::GetSuffix(path);
+    // std::string mime_type = Util::GetMimeType(suffix);
+    // response += "HTTP/1.0 200 OK\r\n";
+    // response += "Content-Type: " + mime_type + "\r\n";
+    // response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+    // response += "\r\n";
+    // response += body;
+    // sock->Send(response);
+    // // response += "HTTP/1.0 200 OK\r\n";
+    // // response += "Content-Type: text/html\r\n";
+    // // response += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+    // // response += "\r\n"; 
+    // // response += body;
+    // // sock->Send(response);
   }
 
   void Start() {

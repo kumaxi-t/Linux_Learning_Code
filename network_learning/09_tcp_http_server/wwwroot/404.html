@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - 页面未找到</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            background-color: #ffffff;
+            color: #e2e2e2;
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+        .code {
+            font-size: 120px;
+            font-weight: 700;
+            color: #2a2a35;
+            animation: fade 2s ease-in-out infinite alternate;
+        }
+        .title {
+            font-size: 24px;
+            color: #cccccc;
+        }
+        .desc {
+            color: #777788;
+            font-size: 16px;
+        }
+        .btn {
+            margin-top: 16px;
+            padding: 12px 28px;
+            border: 1px solid #383848;
+            background: transparent;
+            color: #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        .btn:hover {
+            background-color: #20202b;
+            border-color: #555570;
+        }
+        @keyframes fade {
+            from {opacity: 0.6;}
+            to {opacity: 1;}
+        }
+    </style>
+</head>
+<body>
+    <div class="code">404</div>
+    <h1 class="title">页面不存在</h1>
+    <p class="desc">您访问的地址已经丢失或从未存在</p>
+    <a href="/" class="btn">返回首页</a>
+</body>
+</html>
