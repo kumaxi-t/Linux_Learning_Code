@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <fstream>
+#include <random>
 #include <iostream>
 #include <unordered_map>
 static const std::unordered_map<std::string, std::string> mime_map = {
@@ -41,7 +42,21 @@ public:
     in.close();
     return content;
   }
-  
+  // 创建一个独一无二的SessionId
+  static std::string GenerateSessionId() {
+    static const char charset[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    std::random_device rd;
+    std::mt19937 generator(rd());
+
+    std::uniform_int_distribution<int> dist(0, sizeof(charset) - 2);
+
+    std::string sid;
+    sid.reserve(32);
+    for(int i = 0; i < 32; i++) {
+      sid += charset[dist(generator)];
+    }
+    return sid;
+  }
 
 };
 

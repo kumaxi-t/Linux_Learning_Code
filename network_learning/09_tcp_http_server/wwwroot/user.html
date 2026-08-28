@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>个人中心</title>
+    <style>
+        body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #e9ecef; margin: 0; }
+        .user-card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 350px; text-align: center; }
+        .badge { display: inline-block; padding: 5px 10px; background-color: #28a745; color: white; border-radius: 20px; font-size: 12px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="user-card">
+        <div class="badge">已登录认证</div>
+        <h2>欢迎回来，{{USERNAME}}！</h2>
+        <p>上次登录时间：<strong>{{LOGIN_TIME}}</strong></p>
+        <p style="color: #666; font-size: 14px;">您的 Session 凭证校验成功！</p>
+        <a href="/index.html" style="color: #007bff; text-decoration: none;">返回首页</a>
+    </div>
+</body>
+</html>

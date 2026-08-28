@@ -13,6 +13,14 @@ const std::string glinespace = "\r\n";
 const std::string gsep = ": ";
 const std::string defaultwebpath = "wwwroot";
 
+struct Session{
+  std::string username;
+  std::string login_time;
+};
+
+static std::unordered_map<std::string, Session> g_sessions;
+
+
 class HttpRequest {
 public:
   HttpRequest() {
@@ -67,6 +75,24 @@ public:
     return defaultwebpath + _url; 
   }
 
+  // _headers["Cookie"] : "session_id=X7k9P; theme=dark"   key: "session_id"
+  std::string GetCookie(const std::string &key) const {
+    auto it = _headers.find("Cookie");
+    if(it == _headers.end()) return "";
+
+    const std::string &cookie_str = it->second;
+    std::string target = key + "=";
+    auto pos = cookie_str.find(target);
+    if(pos == std::string::npos) return "";
+
+    size_t start = pos + target.size();
+    auto end = cookie_str.find(";", start);
+    if(end == std::string::npos) {
+      return cookie_str.substr(start);
+    }
+    return cookie_str.substr(start, end - start);
+  }
+
   ~HttpRequest() {
 
   }
@@ -108,7 +134,9 @@ public:
   HttpResponse()
   : _version("HTTP/1.0"),
     _status_code(200),
-    _status_desc("OK") {}
+    _status_desc("OK") {
+      SetHeaders("Connection", "close");
+    }
 
 
   void SetStatus(int code, const std::string &desc) {
@@ -162,6 +190,34 @@ public:
     req.PrintDebug();
 
     HttpResponse resp;
+
+    if(req.GetUrl() == "/login") {
+      std::string sid = Util::GenerateSessionId();
+      g_sessions[sid] = {"hgtz_admin", "1991-01-01"};
+      std::string content = Util::GetFileContent(defaultwebpath + "/login.html");
+      resp.SetStatus(200, "OK");
+      resp.SetHeaders("Set-Cookie", "session_id=" + sid + "; Path=/; HttpOnly");
+      resp.SetBody(content, "text/html");
+      sock->Send(resp.Serialize());
+      return ;
+    }
+
+    if(req.GetUrl() == "/user") {
+      std::string sid = req.GetCookie("session_id");
+      auto it = g_sessions.find(sid);
+      if(it == g_sessions.end() || sid.empty()) {
+        resp.SetStatus(200, "OK");
+        resp.SetBody("<html><h1>401 Unauthorized: Please visit /login first!</h1></html>");
+      }else {
+        // success
+        std::string content = Util::GetFileContent(defaultwebpath + "/user.html");
+        resp.SetStatus(200, "OK");
+        resp.SetBody(content, "text/html");
+      }
+      sock->Send(resp.Serialize());
+      return ;
+    }
+
     // 处理重定向
     if(req.GetUrl() == "/bilibili") {
       resp.SetStatus(302, "Found");
