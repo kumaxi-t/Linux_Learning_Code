@@ -6,6 +6,7 @@
 #include <cstring>
 #include <map>
 #include <memory>
+#include <sstream>
 #include <string>
 #include <unistd.h>
 #include <pthread.h>

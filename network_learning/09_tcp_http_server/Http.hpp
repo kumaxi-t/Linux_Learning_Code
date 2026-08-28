@@ -93,6 +93,28 @@ public:
     return cookie_str.substr(start, end - start);
   }
 
+  // _body="username=hgtz&password=123"
+  std::string GetBodyParam(const std::string &key) {
+    if(_body.empty()) return "";
+
+    std::stringstream ss(_body);
+    std::string item;
+    while(std::getline(ss, item, '&')) {
+      auto pos = item.find('=');
+      if(pos == std::string::npos) continue;
+      std::string k = item.substr(0, pos);
+      std::string v = item.substr(pos + 1);
+      // 找到第一个不是 \r\n的下标
+      size_t last = v.find_last_not_of(" \r\n");
+      if(last != std::string::npos) {
+        v = v.substr(0, last + 1);
+      }
+      if(k == key) {
+        return v;
+      }
+    }
+    return "";
+  }
   ~HttpRequest() {
 
   }
@@ -191,7 +213,7 @@ public:
 
     HttpResponse resp;
 
-    if(req.GetUrl() == "/login") {
+    if(req.GetMethod() == "GET" && req.GetUrl() == "/login") {
       std::string sid = Util::GenerateSessionId();
       g_sessions[sid] = {"hgtz_admin", "1991-01-01"};
       std::string content = Util::GetFileContent(defaultwebpath + "/login.html");
@@ -202,6 +224,26 @@ public:
       return ;
     }
 
+    if(req.GetMethod() == "POST" && req.GetUrl() == "/login") {
+      std::string username = req.GetBodyParam("username");
+      std::string password = req.GetBodyParam("password");
+      LOG(LogLevel::INFO) << "收到 POST 登录请求: 用户名=" << username << ", 密码=" << password;
+
+      if(username == "hgtz" && password == "123456") {
+        std::string sid = Util::GenerateSessionId();
+        g_sessions[sid] = {username, "1991-01-01 16:00"};
+
+        resp.SetStatus(302, "Found");
+        resp.SetHeaders("Location", "/user");
+        resp.SetHeaders("Set-Cookie", "session_id=" + sid + "; Path=/; HttpOnly");
+      }else {
+        resp.SetStatus(200, "OK");
+        resp.SetBody("<html><h1>Login Failed: Wrong username or password!</h1><a href='/login'>Retry</a></html>");
+      }
+      sock->Send(resp.Serialize());
+      return ;
+
+    }
     if(req.GetUrl() == "/user") {
       std::string sid = req.GetCookie("session_id");
       auto it = g_sessions.find(sid);

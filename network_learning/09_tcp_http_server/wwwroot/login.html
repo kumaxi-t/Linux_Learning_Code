@@ -13,11 +13,12 @@
 </head>
 <body>
     <div class="login-card">
-        <h2>用户登录</h2>
-        <form action="/do_login" method="GET">
+        <h2>用户登录 (POST)</h2> 
+        <!-- method="POST" action="/login" -->
+        <form action="/login" method="POST">
             <input type="text" name="username" placeholder="请输入用户名" required>
             <input type="password" name="password" placeholder="请输入密码" required>
-            <button type="submit">一键登录并获取凭证</button>
+            <button type="submit">立即登录</button>
         </form>
     </div>
 </body>
