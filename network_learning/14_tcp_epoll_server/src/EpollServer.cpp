@@ -27,7 +27,7 @@ void EpollServer::Init() {
   _epoll_ptr = std::make_unique<Epoll>(128);
   _revents_ptr = std::make_unique<struct epoll_event[]>(_max_events);
 
-  if(!_epoll_ptr->Add(_listen_fd, EPOLLIN)) {
+  if(!_epoll_ptr->Add(_listen_fd, EPOLLIN | EPOLLET)) {
     std::cerr << "挂载listen_fd到epoll失败" << std::endl;
     exit(1);
   }
@@ -65,49 +65,67 @@ void EpollServer::Start() {
 
 
 void EpollServer::AcceptHandler() {
-  int client_fd = accept(_listen_fd, nullptr, nullptr);
-  if(client_fd < 0) {
-    if(errno == EAGAIN || errno == EWOULDBLOCK) return ;
-    if(errno == EINTR) return ;
-    std::cerr << "accept error" << std::endl;
-    return ;
+  while(true) {
+
+    int client_fd = accept(_listen_fd, nullptr, nullptr);
+    if(client_fd < 0) {
+      if(errno == EAGAIN || errno == EWOULDBLOCK) return ;
+      if(errno == EINTR) continue;
+      std::cerr << "accept error" << std::endl;
+      return ;
+    }
+
+    SetNonBlock(client_fd);
+
+    if(!_epoll_ptr->Add(client_fd, EPOLLIN | EPOLLET)) {
+      std::cerr << "epoll_ctl ADD error" << std::endl;
+      close(client_fd);
+      continue;
+    }
+
+    std::cout << "新用户: "<< client_fd << " 挂载成功" << std::endl;
   }
-
-  SetNonBlock(client_fd);
-
-  if(!_epoll_ptr->Add(client_fd, EPOLLIN)) {
-    std::cerr << "epoll_ctl ADD error" << std::endl;
-    close(client_fd);
-    return ;
-  }
-
-  std::cout << "新用户: "<< client_fd << " 挂载成功" << std::endl;
-
 }
 
 
 void EpollServer::RecvHandler(int client_fd) {
-  char buf[1024];
-  ssize_t s = read(client_fd, buf, sizeof(buf) - 1);
+  char buf[8];
 
-  if(s > 0) {
-    buf[s] = 0;
-    std::cout << "收到客户端：" << client_fd << " 发来的消息：" << buf << std::endl;
-    std::string echo_msg = "Server echo: ";
-    echo_msg += buf;
-    int n = write(client_fd, echo_msg.c_str(), echo_msg.size());
-    (void)n; 
-  }else if(s == 0) {
-    std::cout << "客户端 " << client_fd << " 主动断开连接" << std::endl;
-    _epoll_ptr->Del(client_fd);
-    close(client_fd);
-  }else {
-    if(errno == EAGAIN || errno == EWOULDBLOCK) return ;
-    if(errno == EINTR) return ;
-    std::cerr << "read error" << std::endl;
-    _epoll_ptr->Del(client_fd);
-    close(client_fd);
+  std::string inbuffer;
+  while(true) {
+    ssize_t s = read(client_fd, buf, sizeof(buf) - 1);
+
+    if(s > 0) {
+      buf[s] = 0;
+      inbuffer += buf;
+      // buf[s] = 0;
+      // std::cout << "收到客户端：" << client_fd << " 发来的消息：" << buf << std::endl;
+      // std::string echo_msg = "Server echo: ";
+      // echo_msg += buf;
+      // int n = write(client_fd, echo_msg.c_str(), echo_msg.size());
+      // (void)n; 
+    }else if(s == 0) {
+      std::cout << "客户端 " << client_fd << " 主动断开连接" << std::endl;
+      _epoll_ptr->Del(client_fd);
+      close(client_fd);
+      return ;
+    }else {
+      if(errno == EAGAIN || errno == EWOULDBLOCK) break;
+      if(errno == EINTR) continue;
+      std::cerr << "read error" << std::endl;
+      _epoll_ptr->Del(client_fd);
+      close(client_fd);
+      return ;
+    }
   }
+  if(!inbuffer.empty()) {
+    std::cout << "ET 批量读取完毕收到客户端 " << client_fd << " 数据: " << inbuffer;
+    std::string echo_msg = "Server echo: " + inbuffer;
+
+    int n = write(client_fd, echo_msg.c_str(), echo_msg.size());
+    (void)n;
+  }
+
 }
 
 
