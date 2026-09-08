@@ -1,12 +1,13 @@
 #include "../include/EpollServer.hpp"
 #include "Connection.hpp"
 
-EpollServer::EpollServer(uint16_t port, int max_events) 
+EpollServer::EpollServer(uint16_t port, BusinessHandler business_cb, int max_events) 
   :_port(port),
   _listen_fd(-1),
   _max_events(max_events),
   _epoll_ptr(nullptr),
-  _revents_ptr(nullptr){
+  _revents_ptr(nullptr),
+  _business_cb(business_cb){
 }
 
 EpollServer::~EpollServer() {
@@ -87,7 +88,7 @@ void EpollServer::Start() {
 
 void EpollServer::AcceptHandler(Connection* conn){
   (void)conn;
-  
+
   while(true) {
 
     int client_fd = accept(_listen_fd, nullptr, nullptr);
@@ -147,14 +148,20 @@ void EpollServer::RecvHandler(Connection* conn) {
 
   while(ParseMessage(conn->_inbuffer, &msg)) {
 
-  std::cout << ">>> 成功提取完整业务指令: [" << msg << "]" << std::endl;
+    std::cout << ">>> 成功提取完整业务指令: [" << msg << "]" << std::endl;
 
-  // 模拟业务响应：拼装好响应并带上定界符
-  std::string response = "[Server echo] " + msg + "\n";
-  conn->_outbuffer += response;
+    std::string response;
+    if (_business_cb) {
+        response = _business_cb(msg);
+    } else {
+        response = msg;
+    }
 
-  // 调用发送逻辑尝试直接发送
-  SendHandler(conn);
+    response += "\n";
+    conn->_outbuffer += response;
+
+    // 调用发送逻辑尝试直接发送
+    SendHandler(conn);
   }
 
   std::cout << "[fd: " << conn->_sock_fd << "] 当前 inbuffer 剩余未完结字节: " 
