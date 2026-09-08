@@ -25,7 +25,7 @@ public:
   ~EpollServer();
 
 private:
-  void AcceptHandler();
+  void AcceptHandler(Connection* conn);
 
   void RecvHandler(Connection* conn);
 

@@ -37,6 +37,10 @@ void EpollServer::Init() {
   _revents_ptr = std::make_unique<struct epoll_event[]>(_max_events);
 
   Connection* conn = new Connection(_listen_fd);
+
+  conn->RegisterCallBack(std::bind(&EpollServer::AcceptHandler, this, std::placeholders::_1), nullptr, nullptr);
+
+
   if(!_epoll_ptr->Add(_listen_fd, EPOLLIN | EPOLLET, conn)) {
     std::cerr << "挂载listen_fd到epoll失败" << std::endl;
     exit(1);
@@ -65,26 +69,25 @@ void EpollServer::Start() {
       uint32_t cur_events = _revents_ptr[i].events;
       int client_fd = conn->_sock_fd;
 
-      if(cur_events & (EPOLLERR | EPOLLHUP)) {
-        ExceptHandler(conn);
+      if(cur_events & (EPOLLERR | EPOLLHUP) && conn->_except_cb) {
+        conn->_except_cb(conn);
         continue;
       }
 
-      if(client_fd == _listen_fd && (cur_events & EPOLLIN)) {
-        AcceptHandler();
-      }else if(cur_events & EPOLLIN){
-        RecvHandler(conn);
+      if((cur_events & EPOLLIN) && conn->_read_cb){
+        conn->_read_cb(conn);
       }
-
-      if(cur_events & EPOLLOUT) {
-        SendHandler(conn);
+      if ((cur_events & EPOLLOUT) && conn->_write_cb) {
+        conn->_write_cb(conn);
       }
     }
   }
 }
 
 
-void EpollServer::AcceptHandler() {
+void EpollServer::AcceptHandler(Connection* conn){
+  (void)conn;
+  
   while(true) {
 
     int client_fd = accept(_listen_fd, nullptr, nullptr);
@@ -98,9 +101,16 @@ void EpollServer::AcceptHandler() {
     SetNonBlock(client_fd);
     Connection* conn = new Connection(client_fd);
 
+    conn->RegisterCallBack(
+      std::bind(&EpollServer::RecvHandler, this, std::placeholders::_1),
+      std::bind(&EpollServer::SendHandler, this, std::placeholders::_1),
+      std::bind(&EpollServer::ExceptHandler, this, std::placeholders::_1)
+    );
+
     if(!_epoll_ptr->Add(client_fd, EPOLLIN | EPOLLET, conn)) {
       std::cerr << "epoll_ctl ADD error" << std::endl;
       ExceptHandler(conn);
+      continue;
     }
 
     std::cout << "新用户: "<< client_fd << " 挂载成功" << std::endl;
