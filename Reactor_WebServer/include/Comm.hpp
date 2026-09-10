@@ -13,9 +13,17 @@
 #include <memory>
 #include <sstream>
 #include <fstream>
+#include <unordered_map>
 
 
 bool SetNonBlock(int fd);
 
 
 std::string ReadFile(const std::string& path);
+
+std::string GetSuffix(const std::string& path);
+
+std::string GetMimeType(const std::string& suffix);
+
+
+
