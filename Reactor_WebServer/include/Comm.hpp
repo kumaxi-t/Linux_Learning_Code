@@ -11,7 +11,11 @@
 #include <functional>
 #include <sys/epoll.h>
 #include <memory>
-
+#include <sstream>
+#include <fstream>
 
 
 bool SetNonBlock(int fd);
+
+
+std::string ReadFile(const std::string& path);

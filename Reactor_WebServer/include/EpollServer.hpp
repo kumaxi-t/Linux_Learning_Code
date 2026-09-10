@@ -34,6 +34,5 @@ public:
   void SendHandler(Connection* conn);
   void ExceptHandler(Connection* conn);
 
-
   ~EpollServer();
 };

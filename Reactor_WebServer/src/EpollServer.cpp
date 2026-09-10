@@ -107,10 +107,10 @@ void EpollServer::RecvHandler(Connection* conn) {
 
   while(true) {
 
-    auto pos = conn->_inbuffer.find("\n");
+    auto pos = conn->_inbuffer.find("\r\n");
     if(pos == std::string::npos) break;
-    std::string msg = conn->_inbuffer.substr(0, pos);
-    conn->_inbuffer.erase(0, pos + 1);
+    std::string msg = conn->_inbuffer.substr(0, pos + 4);
+    conn->_inbuffer.erase(0, pos + 4);
 
     std::string response = _business_cb(msg);
     response += "\n";
