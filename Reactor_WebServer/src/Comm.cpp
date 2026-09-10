@@ -26,7 +26,7 @@ std::string ReadFile(const std::string& path) {
 }
 
 std::string GetSuffix(const std::string& path) {
-  auto pos = path.find(".");
+  auto pos = path.rfind(".");
   if(pos == std::string::npos) {
     return ".html";
   }
