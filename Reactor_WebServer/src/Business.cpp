@@ -27,3 +27,34 @@ std::string SimpleHttpHandler(const std::string& req) {
 
     return resp;
 }
+
+
+void AsyncProcessHttpRequest(int fd, std::string req) {
+  Http httphandler;
+  std::string resp = httphandler.HttpHandler(req);
+
+  if(!resp.empty()) {
+    ssize_t total_sent = 0;
+    size_t to_send = resp.size();
+    const char* buf = resp.c_str();
+
+    while(total_sent < to_send) {
+      ssize_t s = write(fd, buf + total_sent, to_send - total_sent);
+      if(s > 0) {
+        total_sent += s;
+      }else {
+        if(errno == EINTR) continue;
+        break;
+      }
+    }
+  }
+  close(fd);
+}
+
+
+
+
+
+
+
+

@@ -1,6 +1,6 @@
 CXX := g++
 # 开启 C++14 支持 std::make_unique，添加头文件搜索路径 -Iinclude
-CXXFLAGS := -std=c++14 -Wall -O2 -Iinclude
+CXXFLAGS := -std=c++17 -Wall -O2 -Iinclude -lpthread
 
 # 搜索所有的 cpp 源码
 SRCS := $(wildcard src/*.cpp)

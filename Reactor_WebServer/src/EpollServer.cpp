@@ -105,21 +105,25 @@ void EpollServer::RecvHandler(Connection* conn) {
     }
   }
 
-  while(true) {
-
-    auto pos = conn->_inbuffer.find("\r\n");
-    if(pos == std::string::npos) break;
-    std::string msg = conn->_inbuffer.substr(0, pos + 4);
-    conn->_inbuffer.erase(0, pos + 4);
-
-    std::string response = _business_cb(msg);
-    response += "\n";
-    conn->_outbuffer += response;
+  auto pos = conn->_inbuffer.find("\r\n\r\n");
+  if(pos == std::string::npos) {
+    return ;
   }
+  std::string req = conn->_inbuffer.substr(0, pos + 4);
+  conn->_inbuffer.erase(0, pos + 4);
 
-  if(!conn->_outbuffer.empty()) SendHandler(conn);
+  int client_fd = conn->_sockfd;
+  _epoll_ptr->Del(client_fd);
 
+  ThreadPoolModule::ThreadPool<>::GetInstance()->Enqueue([client_fd, req](){
+    AsyncProcessHttpRequest(client_fd, req);
+  });
+
+  delete conn;
+  return ;
 }
+
+
 void EpollServer::SendHandler(Connection* conn) {
 
   while(!conn->_outbuffer.empty()) {

@@ -3,6 +3,9 @@
 #include "Socket.hpp"
 #include "Epoll.hpp"
 #include "Connection.hpp"
+#include "ThreadPool.hpp"
+#include "Business.hpp"
+
 
 using BusinessHandler = std::function<std::string(const std::string&)>;
 
