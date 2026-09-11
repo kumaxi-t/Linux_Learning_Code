@@ -14,6 +14,11 @@
 #include <sstream>
 #include <fstream>
 #include <unordered_map>
+#include <dirent.h>
+#include <string>
+#include <sys/stat.h>
+#include <vector>
+#include <iomanip>
 
 
 bool SetNonBlock(int fd);

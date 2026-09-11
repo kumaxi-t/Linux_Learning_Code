@@ -12,3 +12,10 @@ std::string SimpleHttpHandler(const std::string& req);
 
 
 void AsyncProcessHttpRequest(int fd, std::string req);
+
+
+static std::string FormatFileSize(size_t bytes);
+
+
+std::string BuildDirectoryHtml(const std::string& dir_path);
+

@@ -88,7 +88,7 @@ void EpollServer::AcceptHandler(Connection* conn) {
 
 
 void EpollServer::RecvHandler(Connection* conn) {
-  char buf[1024];
+  char buf[4096];
   while(true) {
     ssize_t n = read(conn->_sockfd, buf, sizeof(buf) - 1);
     if(n < 0) {
@@ -101,7 +101,7 @@ void EpollServer::RecvHandler(Connection* conn) {
       return ;
     }else {
       buf[n] = 0;
-      conn->_inbuffer += buf;
+      conn->_inbuffer.append(buf, n);
     }
   }
 
@@ -109,8 +109,31 @@ void EpollServer::RecvHandler(Connection* conn) {
   if(pos == std::string::npos) {
     return ;
   }
-  std::string req = conn->_inbuffer.substr(0, pos + 4);
-  conn->_inbuffer.erase(0, pos + 4);
+  // 解析 Content-Length，判断是否有请求体（Body）
+  size_t header_len = pos + 4;
+  size_t content_length = 0;
+
+  std::string header = conn->_inbuffer.substr(0, header_len);
+  std::string cl_key = "Content-Length: ";
+  auto cl_pos = header.find(cl_key);
+  if (cl_pos != std::string::npos) {
+      auto end_pos = header.find("\r\n", cl_pos);
+      if (end_pos != std::string::npos) {
+          std::string cl_str = header.substr(cl_pos + cl_key.size(), end_pos - (cl_pos + cl_key.size()));
+          content_length = std::stoul(cl_str);
+      }
+  }
+
+  // 检查【头部 + 正文】是否全部接收齐备
+  size_t total_req_len = header_len + content_length;
+  if (conn->_inbuffer.size() < total_req_len) {
+      // 说明正文（文件数据）还没收全，继续留在 epoll 等下一次网络数据到来
+      return;
+  }
+
+
+  std::string req = conn->_inbuffer.substr(0, total_req_len);
+  conn->_inbuffer.erase(0, total_req_len);
 
   int client_fd = conn->_sockfd;
   _epoll_ptr->Del(client_fd);
