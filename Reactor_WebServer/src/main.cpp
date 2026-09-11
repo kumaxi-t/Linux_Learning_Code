@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <algorithm>
+#include "../include/Daemon.hpp"
 #include "../include/Business.hpp"
 #include "../include/EpollServer.hpp"
 #include "../include/Http.hpp"
@@ -15,7 +16,8 @@ int main(int argc, char* argv[]) {
     uint16_t port = static_cast<uint16_t>(std::stoi(argv[1]));
 
     // 将业务回调注入 Reactor 引擎
-
+    DaemonModule::Daemon(false, true);
+    
     Http http_handler;
     auto business_cb = std::bind(&Http::HttpHandler, &http_handler, std::placeholders::_1);
 

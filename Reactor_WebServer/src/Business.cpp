@@ -27,28 +27,34 @@ std::string SimpleHttpHandler(const std::string& req) {
 
     return resp;
 }
-
-
 void AsyncProcessHttpRequest(int fd, std::string req) {
-  Http httphandler;
-  std::string resp = httphandler.HttpHandler(req);
+    Http httphandler;
+    std::string resp = httphandler.HttpHandler(req);
 
-  if(!resp.empty()) {
-    ssize_t total_sent = 0;
-    size_t to_send = resp.size();
-    const char* buf = resp.c_str();
+    if (!resp.empty()) {
+        size_t total_sent = 0;
+        size_t to_send = resp.size();
+        const char* buf = resp.c_str();
 
-    while(total_sent < to_send) {
-      ssize_t s = write(fd, buf + total_sent, to_send - total_sent);
-      if(s > 0) {
-        total_sent += s;
-      }else {
-        if(errno == EINTR) continue;
-        break;
-      }
+        while (total_sent < to_send) {
+            ssize_t s = write(fd, buf + total_sent, to_send - total_sent);
+            if (s > 0) {
+                total_sent += s;
+            } else {
+                if (errno == EINTR) {
+                    continue; // 被信号打断，立即重试
+                }
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // 内核发送缓冲区满了，微睡 1 毫秒（1000 微秒）等待网卡发走一部分数据，继续写
+                    usleep(1000);
+                    continue;
+                }
+                // 只有遇到对端关闭或严重错误才退出
+                break;
+            }
+        }
     }
-  }
-  close(fd);
+    close(fd);
 }
 
 
